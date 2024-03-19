@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "syncmvd"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+#pytorch3d = "0.7.6+pt2.2.1cu121"
+torch ="2.0.1"
+diffusers = "0.19.3"
+transformers = "4.36.0"
+accelerate = "^0.28.0"
+cupy-cuda11x = "12.2.0"
+configargparse = "^1.7"
+xatlas = "^0.0.9"
+ipython = "^8.22.2"
+pytorch3d = "0.7.6+pt2.0.1cu117"
+xformers = "0.0.20"
+torchvision = "0.15.2"
+
+
+[[tool.poetry.source]]
+name = "pytorch3d"
+url = "https://miropsota.github.io/torch_packages_builder/"
+priority = "supplemental"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

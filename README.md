@@ -1,3 +1,18 @@
+# Modified version using Poetry
+Since torch==2.0.1 has an error that prevents proper poetry installation of cuda libraries, after
+running
+```
+poetry install
+```
+run
+```
+poetry shell
+```
+to bring up the correct env, and then run
+```
+pip install torch==2.0.1
+```
+and that should do it. Later maybe I'll try getting this to work with a later version of torch
 # SyncMVD
 
 Official [Pytorch](https://pytorch.org/) & [Diffusers](https://github.com/huggingface/diffusers) implementation of the paper:
