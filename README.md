@@ -1,4 +1,6 @@
 # Modified version using Poetry
+Correct pytorch3d packages can be installed following this repo https://github.com/MiroPsota/torch_packages_builder
+
 Since torch==2.0.1 has an error that prevents proper poetry installation of cuda libraries, after
 running
 ```
