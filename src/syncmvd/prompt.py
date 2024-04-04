@@ -21,12 +21,18 @@ def azim_prompt(embeddings, pose):
 	else:
 		if azim > 180:
 			azim -= 360
+		
+		# JLO did this. This doesn't have much meaning for what we are doing
+		"""
 		if azim >= -30 and azim <= 30:
 			pos_z = embeddings["front"]
 		elif azim <=-120 or azim >= 120:
 			pos_z = embeddings["back"]
 		else:
 			pos_z = embeddings["side"]
+		"""
+		pos_z = embeddings[""]
+	#pos_z = embeddings[""]
 	return pos_z
 
 

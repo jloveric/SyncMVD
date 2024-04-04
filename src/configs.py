@@ -30,7 +30,7 @@ def parse_config():
     # Multi-View Config
     parser.add_argument('--latent_view_size', type=int, default=96, help='Larger resolution, less aliasing in latent images; quality may degrade if much larger trained resolution of networks')
     parser.add_argument('--latent_tex_size', type=int, default=1536, help='Originally 1536 in paper, use lower resolution save VRAM')
-    parser.add_argument('--rgb_view_size', type=int, default=1024)
+    parser.add_argument('--rgb_view_size', type=int, default=1024, help="The size of the sample output renders")
     parser.add_argument('--rgb_tex_size', type=int, default=1024)
     parser.add_argument('--camera_azims', type=int, nargs="*", default=[-180, -135, -90, -45, 0, 45, 90, 135], help='Place the cameras at the listed azim angles')
     parser.add_argument('--no_top_cameras', action='store_true', help='Two cameras added to paint the top surface')

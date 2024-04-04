@@ -42,6 +42,16 @@ class UVProjection():
 	# Load obj mesh, rescale the mesh to fit into the bounding box
 	def load_mesh(self, mesh_path, scale_factor=2.0, auto_center=True, autouv=False):
 		mesh = load_objs_as_meshes([mesh_path], device=self.device)
+		
+		# I added next to lines to see if the loader is the problem.
+		self.mesh = mesh
+		#self.save_mesh(mesh_path="test_mesh.obj")
+		print('Saving the loaded mesh')
+		save_obj("test_mesh.obj", 
+				self.mesh.verts_list()[0],
+				self.mesh.faces_list()[0])
+		print('saved the loade mesh')
+
 		if auto_center:
 			verts = mesh.verts_packed()
 			max_bb = (verts - 0).max(0)[0]
@@ -101,7 +111,7 @@ class UVProjection():
 		atlas = xatlas.Atlas()
 		atlas.add_mesh(v_np, f_np)
 		chart_options = xatlas.ChartOptions()
-		chart_options.max_iterations = 4
+		chart_options.max_iterations = 4 # JLO was 4
 		atlas.generate(chart_options=chart_options)
 		vmapping, ft_np, vt_np = atlas[0]  # [N], [M, 3], [N, 2]
 

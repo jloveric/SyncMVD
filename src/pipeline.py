@@ -15,19 +15,21 @@ from diffusers import DDPMScheduler, DDIMScheduler, UniPCMultistepScheduler
 from diffusers.models import AutoencoderKL, ControlNetModel, UNet2DConditionModel
 from diffusers.schedulers import KarrasDiffusionSchedulers
 from diffusers.image_processor import VaeImageProcessor
+from diffusers.utils.torch_utils import is_compiled_module
+
 from diffusers.utils import (
 	BaseOutput, 
-	randn_tensor, 
 	numpy_to_pil,
 	pt_to_pil,
 	# make_image_grid,
 	is_accelerate_available,
 	is_accelerate_version,
-	is_compiled_module,
+	#is_compiled_module,
 	logging,
-	randn_tensor,
 	replace_example_docstring
 	)
+
+
 
 from diffusers.pipelines.stable_diffusion import StableDiffusionPipelineOutput
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
@@ -105,8 +107,12 @@ def split_groups(attention_mask, max_batch_size, ref_view=[]):
 	group = set()
 	ref_group = set()
 	idx = 0
+
+	# What the hell is this doing?
 	while idx < len(attention_mask):
 		new_group = group | set([idx])
+
+		# Compute the union of the ref_group and the current attention mask, remove current id
 		new_ref_group = (ref_group | set(attention_mask[idx] + ref_view)) - new_group 
 		if len(new_group) + len(new_ref_group) <= max_batch_size:
 			group = new_group
@@ -131,7 +137,7 @@ def split_groups(attention_mask, max_batch_size, ref_view=[]):
 			group_attention_masks.append([in_mask.index(idxx) for idxx in attention_mask[idx] if idxx in in_mask])
 		ref_attention_mask = [in_mask.index(idx) for idx in ref_view]
 		group_metas.append([in_mask, out_mask, group_attention_masks, ref_attention_mask])
-
+	#print('group_metas', group_metas)
 	return group_metas
 
 '''
@@ -154,6 +160,7 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 		safety_checker: StableDiffusionSafetyChecker,
 		feature_extractor: CLIPImageProcessor,
 		requires_safety_checker: bool = False,
+		image_encoder=None,
 	):
 		super().__init__(
 			vae, text_encoder, tokenizer, unet, 
@@ -211,6 +218,8 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 			if azim < 0:
 				azim += 360
 			self.camera_poses.append((0, azim))
+
+			# Not sure why an attention mask is needed
 			self.attention_mask.append([(cam_count+i-1)%cam_count, i, (i+1)%cam_count])
 			if abs(azim) < front_view_diff:
 				front_view_idx = i
@@ -219,13 +228,50 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 				back_view_idx = i
 				back_view_diff = abs(azim - 180)
 
-		# Add two additional cameras for painting the top surfaces
 		if top_cameras:
-			self.camera_poses.append((30, 0))
-			self.camera_poses.append((30, 180))
+			
+			# Top cameras
+			self.camera_poses.append((45, 0))
+			self.camera_poses.append((45, 120))
+			self.camera_poses.append((45, 240))
+			self.camera_poses.append((90, 0))
+
+			# Bottom cameras
+			self.camera_poses.append((-45, 0))
+			self.camera_poses.append((-45, 120))
+			self.camera_poses.append((-45, 240))
+			
+			#self.camera_poses.append((0, 0))
+			#self.camera_poses.append((0, 180))
 
 			self.attention_mask.append([front_view_idx, cam_count])
 			self.attention_mask.append([back_view_idx, cam_count+1])
+			self.attention_mask.append([back_view_idx, cam_count+2])
+			self.attention_mask.append([back_view_idx, cam_count+3])
+
+			self.attention_mask.append([back_view_idx, cam_count+4])
+			self.attention_mask.append([back_view_idx, cam_count+5])
+			self.attention_mask.append([back_view_idx, cam_count+6])
+
+		
+		"""
+		# Add two additional cameras for painting the top surfaces
+		if top_cameras:
+			self.camera_poses.append((0, 45))
+			self.camera_poses.append((120,45))
+			self.camera_poses.append((240,45))
+			self.camera_poses.append((0, 0))
+
+			# Not bottom camera
+			#self.camera_poses.append((30, 180))
+
+			final_count = cam_count+3
+			for i in range(3) :
+				
+				self.attention_mask.append([(3+i-1)%3+cam_count,i+cam_count, (i+1)%3+cam_count])
+			
+			self.attention_mask.append([front_view_idx, cam_count])
+		"""
 
 		# Reference view for attention (all views attend the the views in this list)
 		# A forward view will be used if not specified
@@ -259,7 +305,7 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 		self.uvp.to("cpu")
 		self.uvp_rgb.to("cpu")
 
-
+		# Not sure what the color latents are
 		color_images = torch.FloatTensor([color_constants[name] for name in color_names]).reshape(-1,3,1,1).to(dtype=self.text_encoder.dtype, device=self._execution_device)
 		color_images = torch.ones(
 			(1,1,latent_size*8, latent_size*8), 
@@ -436,6 +482,7 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 		negative_prompt_embed_dict = dict(zip(direction_names, [emb for emb in negative_prompt_embeds]))
 
 		# (4. Prepare image) This pipeline use internal conditional images from Pytorch3D
+		# These are the depth maps for each view
 		self.uvp.to(self._execution_device)
 		conditioning_images, masks = get_conditioning_images(self.uvp, height, cond_type=cond_type)
 		conditioning_images = conditioning_images.type(prompt_embeds.dtype)
@@ -531,9 +578,14 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 						down_block_res_samples_list = []
 						mid_block_res_sample_list = []
 
+						#print('len(group_metas)', len(self.group_metas), self.group_metas[0][0])
+						#Ok, this is crazy, it only ever takes the first batch [[0 through 9]] which I guess explains
+	  					#the memory footprint. No idea what this other stuff represents.
 						model_input_batches = [torch.index_select(control_model_input, dim=0, index=torch.tensor(meta[0], device=self._execution_device)) for meta in self.group_metas]
 						prompt_embeds_batches = [torch.index_select(controlnet_prompt_embeds, dim=0, index=torch.tensor(meta[0], device=self._execution_device)) for meta in self.group_metas]
 						conditioning_images_batches = [torch.index_select(conditioning_images, dim=0, index=torch.tensor(meta[0], device=self._execution_device)) for meta in self.group_metas]
+
+						#print('model_input_batches', model_input_batches)
 
 						for model_input_batch ,prompt_embeds_batch, conditioning_images_batch \
 							in zip (model_input_batches, prompt_embeds_batches, conditioning_images_batches):

@@ -10,7 +10,6 @@ python = "^3.11"
 
 #pytorch3d = "0.7.6+pt2.2.1cu121"
 torch ="2.0.1"
-diffusers = "0.19.3"
 transformers = "4.36.0"
 accelerate = "^0.28.0"
 cupy-cuda11x = "12.2.0"
@@ -20,6 +19,12 @@ ipython = "^8.22.2"
 pytorch3d = "0.7.6+pt2.0.1cu117"
 xformers = "0.0.20"
 torchvision = "0.15.2"
+diffusers = "0.21.1"
+trimesh = "^4.2.2"
+matplotlib = "^3.8.4"
+plotly = "^5.20.0"
+click = "^8.1.7"
+black = "^24.3.0"
 
 
 [[tool.poetry.source]]

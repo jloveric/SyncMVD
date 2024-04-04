@@ -64,8 +64,25 @@ pipe = StableDiffusionControlNetPipeline.from_pretrained(
 )
 
 
-pipe.scheduler = DDPMScheduler.from_config(pipe.scheduler.config)
+pipe = StableDiffusionControlNetPipeline.from_pretrained(
+	"/home/john/huggingface/civitai-conversions/architecturerealmix_v1repair", controlnet=controlnet, torch_dtype=torch.float16
+)
 
+"""
+pipe = StableDiffusionControlNetPipeline.from_pretrained(
+	"/home/john/huggingface/civitai-conversions/architectureExterior_v40Exterior", controlnet=controlnet, torch_dtype=torch.float16
+)
+"""
+
+"""
+pipe = StableDiffusionControlNetPipeline.from_pretrained(
+	"/home/john/glodon/generative-rendering/xsarchitecturalv3com_v31", controlnet=controlnet, torch_dtype=torch.float16
+)
+"""
+
+
+
+pipe.scheduler = DDPMScheduler.from_config(pipe.scheduler.config)
 syncmvd = StableSyncMVDPipeline(**pipe.components)
 
 
