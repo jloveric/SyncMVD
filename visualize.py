@@ -28,17 +28,33 @@ from PIL import Image
 import numpy as np
 from pathlib import Path
 import click
+import pathlib
 
 # Set batch size - this is the number of different viewpoints from which we want to render the mesh.
 
 # Load the OBJ file and texture image
 
 
-def generate_views(base_path, batch_size: int = 10, device: str = "cuda"):
+def generate_views(base_path, batch_size: int = 10, device: str = "cuda", distance:float=2.7):
 
     base_path = Path(base_path)
 
-    model_file = base_path / "textured.obj"
+    # Define the directory path
+    directory_path = Path(base_path)
+
+    # Get a list of all files with the .obj extension in the directory
+    obj_files = [file for file in directory_path.iterdir() if file.suffix == '.obj']
+
+    # Check if any .obj files were found
+    if obj_files:
+        # Get the first .obj file
+        first_obj_file = obj_files[0]
+        print("First .obj file found:", first_obj_file)
+    else:
+        print("No .obj files found in the directory")
+
+    # Find the object file *.obj
+    model_file = base_path / first_obj_file #"textured.obj"
     texture_file = base_path / "textured.png"
 
     mesh = load_objs_as_meshes([model_file], device=device)
@@ -62,11 +78,11 @@ def generate_views(base_path, batch_size: int = 10, device: str = "cuda"):
         faces_per_pixel=1,
     )
 
-    distance = 10
+    light_distance = 10
     locations = torch.tensor(
         [
             [
-                [0.0, 0.0, -distance],
+                [0.0, 0.0, -light_distance],
             ]
         ],
         device=device,
@@ -76,7 +92,7 @@ def generate_views(base_path, batch_size: int = 10, device: str = "cuda"):
     # Place a point light in front of the object. As mentioned above, the front of the cow is facing the
     # -z direction.
     lights = PointLights(device=device, location=locations)
-    lights = AmbientLights(device=device, ambient_color=[1.0, 1.0, 1.0])
+    lights = AmbientLights(device=device, ambient_color=[0.5, 0.5, 0.5])
 
     # Create a Phong renderer by composing a rasterizer and a shader. The textured Phong shader will
     # interpolate the texture uv coordinates for each vertex, sample from a texture image and
@@ -98,7 +114,7 @@ def generate_views(base_path, batch_size: int = 10, device: str = "cuda"):
     # All the cameras helper methods support mixed type inputs and broadcasting. So we can
     # view the camera from the same distance and specify dist=2.7 as a float,
     # and then specify elevation and azimuth angles for each viewpoint as tensors.
-    R, T = look_at_view_transform(dist=2.7, elev=elev, azim=azim)
+    R, T = look_at_view_transform(dist=distance, elev=elev, azim=azim)
     cameras = FoVPerspectiveCameras(device=device, R=R, T=T)
 
     # Move the light back in front of the cow which is facing the -z direction.
@@ -115,12 +131,14 @@ def generate_views(base_path, batch_size: int = 10, device: str = "cuda"):
 
 
 @click.command()
-@click.option("--base-path", help="Number of greetings.")
+@click.option("--base-path", help="Base path where obj file is located.")
 @click.option("--batch-size", default=10, help="Number of images to draw")
-def run(base_path: str, batch_size: int):
+@click.option("--distance", default=2.7, help="Distance of camera from origin")
+def run(base_path: str, batch_size: int, distance:float):
     generate_views(
         base_path=base_path,
         batch_size=batch_size,
+        distance=distance,
     )
 
 
