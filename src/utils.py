@@ -55,8 +55,17 @@ def latent_preview(x):
 
 
 # Decode each view and bake them into a rgb texture
-def get_rgb_texture(vae, uvp_rgb, latents):
-	result_views = vae.decode(latents / vae.config.scaling_factor, return_dict=False)[0]
+def get_rgb_texture(vae, uvp_rgb, latents, batch_views:bool=True):
+
+	if batch_views is False :
+		result_views=[]
+		for latent in latents :
+			views = vae.decode(latent.unsqueeze(0) / vae.config.scaling_factor, return_dict=False)[0]
+			result_views.append(views)
+		result_views = torch.cat(result_views,dim=0)
+	else:
+		result_views = vae.decode(latents / vae.config.scaling_factor, return_dict=False)[0]
+	
 	resize = Resize((uvp_rgb.render_size,)*2, interpolation=InterpolationMode.NEAREST_EXACT, antialias=True)
 	result_views = resize(result_views / 2 + 0.5).clamp(0, 1).unbind(0)
 	textured_views_rgb, result_tex_rgb, visibility_weights = uvp_rgb.bake_texture(views=result_views, main_views=[], exp=6, noisy=False)

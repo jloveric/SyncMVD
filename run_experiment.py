@@ -121,8 +121,7 @@ result_tex_rgb, textured_views, v = syncmvd(
 
 	logging_config=logging_config,
 	cond_type=opt.cond_type,
-	
-	
+	batch_views=False
 	)
 
 display(v)

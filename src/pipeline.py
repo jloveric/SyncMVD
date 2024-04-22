@@ -372,7 +372,13 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 
 		logging_config=None,
 		cond_type="depth",
+		batch_views:bool=True
 	):
+		"""
+		batch_views: Tells whether to decode in batch or in serial.
+		Set to false if you are running out of memory during logging or
+		during the last step.
+		"""
 		
 
 		# Setup pipeline settings
@@ -747,6 +753,7 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 							images = latent_preview(latent_images.to(self._execution_device))
 							images = np.concatenate([img for img in images], axis=1)
 							decoded_results.append(images)
+						
 						result_image = np.concatenate(decoded_results, axis=0)
 						numpy_to_pil(result_image)[0].save(f"{self.intermediate_dir}/step_{i:02d}.jpg")
 					else:
@@ -767,7 +774,7 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 							numpy_to_pil(texture_color)[0].save(f"{self.intermediate_dir}/texture_{i:02d}.jpg")
 						else:
 							self.uvp_rgb.to(self._execution_device)
-							result_tex_rgb, result_tex_rgb_output = get_rgb_texture(self.vae, self.uvp_rgb, pred_original_sample)
+							result_tex_rgb, result_tex_rgb_output = get_rgb_texture(self.vae, self.uvp_rgb, pred_original_sample,batch_views=batch_views)
 							numpy_to_pil(result_tex_rgb_output)[0].save(f"{self.intermediate_dir}/texture_{i:02d}.png")
 							self.uvp_rgb.to("cpu")
 
@@ -792,7 +799,7 @@ class StableSyncMVDPipeline(StableDiffusionControlNetPipeline):
 		
 		self.uvp.to(self._execution_device)
 		self.uvp_rgb.to(self._execution_device)
-		result_tex_rgb, result_tex_rgb_output = get_rgb_texture(self.vae, self.uvp_rgb, latents)
+		result_tex_rgb, result_tex_rgb_output = get_rgb_texture(self.vae, self.uvp_rgb, latents,batch_views=batch_views)
 		self.uvp.save_mesh(f"{self.result_dir}/textured.obj", result_tex_rgb.permute(1,2,0))
 
 
